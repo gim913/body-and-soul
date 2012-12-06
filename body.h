@@ -3,6 +3,7 @@
 
 #include <list>
 #include <string>
+#include <vector>
 #include <istream>
 #include "challenge.h"
 #include "glyph.h"

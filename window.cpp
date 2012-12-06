@@ -122,7 +122,7 @@ void Window::putstr(int x, int y, nc_color fg, nc_color bg, std::string str,
 
 }
 
-void Window::putstr(int x, int y, nc_color fg, nc_color bg, std::string str,
+void Window::putstr_raw(int x, int y, nc_color fg, nc_color bg, std::string str,
                     ...)
 {
  va_list ap;
