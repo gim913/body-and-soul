@@ -66,10 +66,14 @@ int main()
 
   if (blink) {
    if (dm == DM_MOVE_ELE)
+   {
      w.putglyph(sel->posx, sel->posy, glyph(LINE_OXXO, c_pink, c_black));
+   }
    else if (dm == DM_RESIZE_ELE)
+   {
      w.putglyph(sel->posx + sel->sizex - 1, sel->posy + sel->sizey - 1,
                 glyph(LINE_XOOX, c_pink, c_black));
+   }
    else {
      if (gl_orig == pen) {
        glyph tmp(pen.symbol, pen.fg, hilight(pen.bg));
@@ -85,9 +89,10 @@ int main()
    temp_box(w, bufx, bufy, posx, posy);
 
   w.refresh();
-  timeout((blink ? 300 : 150));
-  long ch = getch();
-  timeout(-1);
+  //timeout((blink ? 300 : 150));
+  long ch = input();
+  //timeout(-1);
+  printf("got key");
 
   if (ch == ERR)
    blink = !blink;
@@ -382,7 +387,7 @@ int main()
  } else
   popup("Couldn't open %s for saving", fname.c_str());
 
- endwin();
+ //endwin();
  return 0;
 }
 
@@ -410,7 +415,7 @@ bool starting_window(interface &edited)
  while (!done) {
   i_start.draw(&w_start);
   w_start.refresh();
-  long ch = getch();
+  long ch = input();
   if (ch == 'j' || ch == '2' || ch == KEY_DOWN) {
    i_start.add_data("list_interfaces",  1);
    selname = i_start.get_str("list_interfaces");
@@ -466,7 +471,7 @@ void bindings_window(interface &edited)
  bool done = false;
  while (!done) {
   i_bindings.draw(&w_bindings);
-  long ch = getch();
+  long ch = input();
 
   switch (ch) {
    case 'j':
@@ -526,7 +531,7 @@ void bindings_window(interface &edited)
         bool done = false;
         while (!done) {
          i_bindings.draw(&w_bindings);
-         long ch = getch();
+         long ch = input();
          if (ch == 'j' || ch == 'J' || ch == '2' || ch == KEY_DOWN)
           i_bindings.selected()->add_data(1);
          if (ch == 'k' || ch == 'K' || ch == '8' || ch == KEY_UP)
@@ -641,7 +646,7 @@ void elements_window(interface &edited)
 
   i_ele.draw(&w_elements);
 
-  long ch = getch();
+  long ch = input();
 
   if (ch == KEY_ESC)
    done = true;
@@ -1138,7 +1143,7 @@ c     Copy symbol & colors under pen\n\
 
 void set_pen_symbol()
 {
- long ch = getch();
+ long ch = input();
  //if (ch != ' ')
  pen.symbol = ch;
 }
@@ -1170,7 +1175,7 @@ nc_color pick_color()
  w_col.putstr(1, 4, c_white, c_black, "abcdefgh");
 
  w_col.refresh();
- long ch = getch();
+ long ch = input();
 
  if (ch >= '1' && ch <= '8')
   return nc_color(ch - '1');

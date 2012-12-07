@@ -125,11 +125,11 @@ void Window::putch(int x, int y, nc_color fg, nc_color bg, long sym)
  }
 */
  long col = get_color_pair(fg, bg);
- /*
- wattron(w, col);
- mvwaddch(w, y, x, sym);
- wattroff(w, col);
- */
+
+ w->setBackgroundFlag(TCOD_BKGND_SET);
+ w->setDefaultForeground( translateColor(fg) );
+ w->setDefaultBackground( translateColor(bg) );
+
  int charcode=sym;
  if (sym > 255)
  {
@@ -171,7 +171,6 @@ void Window::putch(int x, int y, nc_color fg, nc_color bg, long sym)
     break;
   }
  }
- printf ("%d", y%10);
  if (charcode < 256)
   w->setChar(x, y, charcode);
  else
@@ -343,7 +342,19 @@ void init_display()
 long input()
 {
  TCODConsole::flush();
- TCOD_key_t key = TCODConsole::waitForKeypress(true);
+ TCOD_key_t key;
+ TCOD_event_t ev = TCODSystem::waitForEvent(TCOD_EVENT_KEY_RELEASE,&key,0,true);
+ switch (key.vk)
+ {
+  case TCODK_BACKSPACE: return KEY_BACKSPACE;
+  case TCODK_ENTER: return '\n';
+  case TCODK_UP: return KEY_UP;
+  case TCODK_LEFT: return KEY_LEFT;
+  case TCODK_RIGHT: return KEY_RIGHT;
+  case TCODK_DOWN: return KEY_DOWN;
+  case TCODK_ESCAPE: return KEY_ESC;
+  default: break;
+ }
  return key.c;
 }
 

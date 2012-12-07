@@ -12,6 +12,7 @@ ODIR = objwin
 DDIR = .deps
 
 TARGET = bodysoul.exe
+TARGET2 = cussedit.exe
 
 CXX = g++
 
@@ -23,20 +24,31 @@ CFLAGS = $(WARNINGS) $(DEBUG) $(PROFILE) $(OTHERS) -Ilibtcod-1.5.1/include
 LDFLAGS = -Llibtcod-1.5.1/lib -ltcod-mingw -static 
 
 SOURCES = $(wildcard *.cpp)
-_OBJS = $(SOURCES:.cpp=.o)
-OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
+SOURCES2 = $(filter-out editor.cpp, $(wildcard *.cpp)) cuss_editor/interface_editor.cpp
 
-all: $(TARGET)
+_OBJS = $(SOURCES:.cpp=.o)
+_OBJS2 = $(SOURCES2:.cpp=.o)
+OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
+OBJS2 = $(patsubst %,$(ODIR)/%,$(_OBJS2))
+
+all: $(TARGET) $(TARGET2)
 	@
 
 $(TARGET): $(ODIR) $(DDIR) $(OBJS)
 	$(CXX) $(LINKERFLAGS) -o $(TARGET) $(DEFINES) $(CFLAGS) $(OBJS) $(LDFLAGS) 
 
+$(TARGET2): $(ODIR) $(DDIR) $(OBJS2)
+	$(CXX) $(LINKERFLAGS) -o $(TARGET2) $(DEFINES) $(CFLAGS) $(OBJS2) $(LDFLAGS) 
+
 $(ODIR):
 	mkdir $(ODIR)
+	mkdir $(ODIR)/cuss_editor
 
 $(DDIR):
 	@mkdir $(DDIR)
+
+objwin/cuss_editor/interface_editor.o: cuss_editor/interface_editor.cpp
+	$(CXX) -I. $(DEFINES) $(CFLAGS) -c $< -o $@
 
 $(ODIR)/%.o: %.cpp
 	$(CXX) $(DEFINES) $(CFLAGS) -c $< -o $@
@@ -45,3 +57,4 @@ clean:
 	rm -f $(TARGET) $(ODIR)/*.o
 
 -include $(SOURCES:%.cpp=$(DEPDIR)/%.P)
+
