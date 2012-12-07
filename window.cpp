@@ -10,18 +10,52 @@ bool parse_color_tags(std::string text, std::vector<std::string> &segments,
                       std::vector<long> &color_pairs, nc_color fg = c_white,
                       nc_color bg = c_black);
 
+TCODColor translateColor(int i)
+{
+ switch(i)
+ {
+  case c_black:   return TCODColor::black;
+  case c_white:   return TCODColor::white;
+  case c_red:     return TCODColor::darkRed;
+  case c_green:   return TCODColor::darkGreen;
+  case c_blue:    return TCODColor::darkBlue;
+  case c_cyan:    return TCODColor::darkCyan;
+  case c_magenta: return TCODColor::darkMagenta;
+  case c_yellow:  return TCODColor::darkYellow;
+
+  case c_ltgray:  return TCODColor::lightGrey;
+  case c_dkgray:  return TCODColor::darkGrey;
+  case c_ltred:   return TCODColor::lightRed;
+  case c_ltgreen: return TCODColor::lightGreen;
+  case c_ltblue:  return TCODColor::lightBlue;
+  case c_ltcyan:  return TCODColor::lightCyan;
+  case c_pink:    return TCODColor::lightPink;
+  default: break;
+ }
+
+ return TCODColor::black;
+}
+
 Window::Window()
 {
- w = newwin(0, 0, 0, 0);
+ w = new TCODConsole(0,0);
+ w->setDefaultBackground(TCODColor::black);
+ w->setDefaultForeground(TCODColor::lightGrey);
+ clear();
  outlined = false;
  xdim = 0;
  ydim = 0;
  WINDOWLIST.push_back(this);
 }
 
-Window::Window(int posx, int posy, int sizex, int sizey)
+Window::Window(int posx, int posy, int sizex, int sizey) :
+ m_posx(posx),
+ m_posy(posy)
 {
- w = newwin(sizey, sizex, posy, posx);
+ w = new TCODConsole(sizex, sizey);
+ w->setDefaultBackground(TCODColor::black);
+ w->setDefaultForeground(TCODColor::lightGrey);
+ clear();
  outlined = false;
  xdim = sizex;
  ydim = sizey;
@@ -30,21 +64,28 @@ Window::Window(int posx, int posy, int sizex, int sizey)
 
 Window::~Window()
 {
- delwin(w);
+ delete w;
+ w = 0;
  WINDOWLIST.remove(this);
 }
 
 void Window::init(int posx, int posy, int sizex, int sizey)
 {
- delwin(w);
- w = newwin(sizey, sizex, posy, posx);
+ delete w;
+ m_posx = posx;
+ m_posy = posy;
+ w = new TCODConsole(sizex, sizey);
+ w->setDefaultBackground(TCODColor::black);
+ w->setDefaultForeground(TCODColor::lightGrey);
+ clear();
  xdim = sizex;
  ydim = sizey;
 }
 
 void Window::close()
 {
- delwin(w);
+ delete w;
+ w = 0;
  WINDOWLIST.remove(this);
  refresh_all(true);
 }
@@ -53,10 +94,12 @@ void Window::outline()
 {
  outlined = true;
  long col = get_color_pair(c_white, c_black);
+ /*
  wattron(w, col);
  wborder(w, LINE_XOXO, LINE_XOXO, LINE_OXOX, LINE_OXOX,
             LINE_OXXO, LINE_OOXX, LINE_XXOO, LINE_XOOX );
  wattroff(w, col);
+ */
 }
 
 glyph Window::glyphat(int x, int y)
@@ -65,10 +108,11 @@ glyph Window::glyphat(int x, int y)
  if (x < 0 || x >= xdim || y < 0 || y >= ydim)
   return ret; // Whatever a default glyph is
 
- long wi = mvwinch(w, y, x);
+ //long wi = mvwinch(w, y, x);
  //ret.symbol = wi - ((wi & A_COLOR) + (wi & A_ATTRIBUTES));
- ret.symbol = wi & A_CHARTEXT;
- extract_colors(wi & A_COLOR, wi & A_ATTRIBUTES, ret.fg, ret.bg);
+ //ret.symbol = wi & A_CHARTEXT;
+ //extract_colors(wi & A_COLOR, wi & A_ATTRIBUTES, ret.fg, ret.bg);
+ ret.symbol = w->getChar(x,y);
  return ret;
 }
  
@@ -81,9 +125,57 @@ void Window::putch(int x, int y, nc_color fg, nc_color bg, long sym)
  }
 */
  long col = get_color_pair(fg, bg);
+ /*
  wattron(w, col);
  mvwaddch(w, y, x, sym);
  wattroff(w, col);
+ */
+ int charcode=sym;
+ if (sym > 255)
+ {
+  switch (sym) {
+   case LINE_XOXO:
+    charcode=179;
+    break;
+   case LINE_OXOX:
+    charcode=196;
+    break;
+   case LINE_XXOO:
+    charcode=192;
+    break;
+   case LINE_OXXO:
+    charcode=218;
+    break;
+   case LINE_OOXX:
+    charcode=191;
+    break;
+   case LINE_XOOX:
+    charcode=217;
+    break;
+   case LINE_XXOX:
+    charcode=193;
+    break;
+   case LINE_XXXO:
+    charcode=195;
+    break;
+   case LINE_XOXX:
+    charcode=180;
+    break;
+   case LINE_OXXX:
+    charcode=194;
+    break;
+   case LINE_XXXX:
+    charcode=197;
+    break;
+   default:
+    break;
+  }
+ }
+ printf ("%d", y%10);
+ if (charcode < 256)
+  w->setChar(x, y, charcode);
+ else
+  printf("Window::putch %d %c\n", charcode, charcode);
 }
 
 void Window::putglyph(int x, int y, glyph gl)
@@ -103,20 +195,26 @@ void Window::putstr(int x, int y, nc_color fg, nc_color bg, std::string str,
  std::string prepped = buff;
  long col = get_color_pair(fg, bg);
 
+ w->setBackgroundFlag(TCOD_BKGND_SET);
+ w->setDefaultForeground( translateColor(fg) );
+ w->setDefaultBackground( translateColor(bg) );
  if (prepped.find("<c=") == std::string::npos) {
 // No need to do color segments, so just print!
-  wattron(w, col);
-  mvwprintw(w, y, x, buff);
-  wattroff(w, col);
+  w->print(x,y,buff);
  } else { // We need to do color segments!
-  wmove(w, y, x);
   std::vector<std::string> segments;
   std::vector<long> color_pairs;
   parse_color_tags(prepped, segments, color_pairs, fg, bg);
+  int pos = 0;
+  nc_color tfg, tbg;
   for (int i = 0; i < segments.size(); i++) {
-   wattron( w, color_pairs[i] );
-   wprintw(w, segments[i].c_str());
-   wattroff( w, color_pairs[i] );
+   int col = color_pairs[i]&~(A_BOLD|A_BLINK);
+   int attr= color_pairs[i]&(A_BOLD|A_BLINK);
+   extract_colors(col, attr, tfg, tbg);
+   w->setDefaultForeground( translateColor(tfg) );
+   w->setDefaultBackground( translateColor(tbg) );
+   w->print(x+pos,y, segments[i].c_str());
+   pos += segments[i].length();
   }
  }        // We need to do color segments!
 
@@ -134,9 +232,10 @@ void Window::putstr_raw(int x, int y, nc_color fg, nc_color bg, std::string str,
  std::string prepped = buff;
  long col = get_color_pair(fg, bg);
 
- wattron(w, col);
- mvwprintw(w, y, x, buff);
- wattroff(w, col);
+ w->setBackgroundFlag(TCOD_BKGND_SET);
+ w->setDefaultForeground( translateColor(fg) );
+ w->setDefaultBackground( translateColor(bg) );
+ w->print(x,y,buff);
 }
  
 void Window::putstr_n(int x, int y, nc_color fg, nc_color bg, int maxlength,
@@ -151,26 +250,31 @@ void Window::putstr_n(int x, int y, nc_color fg, nc_color bg, int maxlength,
  std::string prepped = buff;
  long col = get_color_pair(fg, bg);
 
+ w->setBackgroundFlag(TCOD_BKGND_SET);
+ w->setDefaultForeground( translateColor(fg) );
+ w->setDefaultBackground( translateColor(bg) );
  if (prepped.find("<c=") == std::string::npos) {
 // No need to do color segments, so just print!
-  wattron(w, col);
-  mvwprintw(w, y, x, prepped.substr(0, maxlength).c_str());
-  wattroff(w, col);
+  w->print(x,y, prepped.substr(0, maxlength).c_str());
  } else { // We need to do color segments!
-  wmove(w, y, x);
   std::vector<std::string> segments;
   std::vector<long> color_pairs;
   parse_color_tags(prepped, segments, color_pairs, fg, bg);
+  int pos=0;
+  nc_color tfg, tbg;
   for (int i = 0; i < segments.size(); i++) {
-   wattron( w, color_pairs[i] );
+   int col = color_pairs[i]&~(A_BOLD|A_BLINK);
+   int attr= color_pairs[i]&(A_BOLD|A_BLINK);
+   extract_colors(col, attr, tfg, tbg);
+   w->setDefaultForeground( translateColor(tfg) );
+   w->setDefaultBackground( translateColor(tbg) );
    if (segments[i].length() > maxlength) {
-    wprintw(w, segments[i].substr(0, maxlength).c_str());
-    wattroff( w, color_pairs[i] );
+    w->print(x+pos, y, segments[i].substr(0, maxlength).c_str());
     return; // Stop; we've run out of space.
    } else {
-    wprintw(w, segments[i].c_str());
     maxlength -= segments[i].length();
-    wattroff( w, color_pairs[i] );
+    w->print(x+pos, y, segments[i].substr(0, maxlength).c_str());
+    pos += segments[i].length();
    }
   }
  } // We need to do color segments!
@@ -209,30 +313,38 @@ void Window::line_h(int y, nc_color fg, nc_color bg)
 
 void Window::clear()
 {
- werase(w);
+ w->clear();
 }
 
 void Window::refresh()
 {
- wrefresh(w);
+ printf("refreshing window: %dx%d at (%d,%d)\n",xdim,ydim,m_posx,m_posy);
+ TCODConsole::blit(w,0,0,0,0,TCODConsole::root,m_posx,m_posy);
+ TCODConsole::flush();
 }
 
 void init_display()
 {
- initscr();
- noecho();
- cbreak();
- keypad(stdscr, true);
- init_colors();
- curs_set(0);
- timeout(1);
- getch();
- timeout(-1);
+// initscr();
+// noecho();
+// cbreak();
+// keypad(stdscr, true);
+// init_colors();
+// curs_set(0);
+// timeout(1);
+// getch();
+// timeout(-1);
+ TCODConsole::initRoot(100,50,"body and soul", false);
+ TCODSystem::setFps(25); // limit framerate to 25 frames per second
+ TCODConsole::root->setDefaultBackground(TCODColor::black);
+ TCODConsole::root->setDefaultForeground(TCODColor::lightGrey);
 }
 
 long input()
 {
- return getch();
+ TCODConsole::flush();
+ TCOD_key_t key = TCODConsole::waitForKeypress(true);
+ return key.c;
 }
 
 void debugmsg(const char *mes, ...)
@@ -242,16 +354,17 @@ void debugmsg(const char *mes, ...)
  char buff[2048];
  vsprintf(buff, mes, ap);
  va_end(ap);
- attron(COLOR_PAIR(3));
- mvprintw(0, 0, "DEBUG: %s      \n  Press spacebar...", buff);
- while(getch() != ' ');
- attroff(COLOR_PAIR(3));
+ //attron(COLOR_PAIR(3));
+ //mvprintw(0, 0, "DEBUG: %s      \n  Press spacebar...", buff);
+ TCODConsole::root->print(0,0, "DEBUG: %s      \n  Press spacebar...", buff);
+ while(input() != ' ');
+ //attroff(COLOR_PAIR(3));
 }
 
 void refresh_all(bool erase) // erase defaults to false
 {
  if (erase)
-  clear();
+  TCODConsole::root->clear();
 
  for (std::list<Window*>::iterator it = WINDOWLIST.begin();
       it != WINDOWLIST.end(); it++)
@@ -327,7 +440,7 @@ std::string string_edit_popup(std::string orig, const char *mes, ...)
  w.putch(posx, 1, c_ltgray, c_blue, '_');
  do {
   w.refresh();
-  long ch = getch();
+  long ch = input();
   if (ch == 27) {	// Escape
    return orig;
   } else if (ch == '\n') {
@@ -370,7 +483,7 @@ int int_input_popup(const char *mes, ...)
  bool done = false;
  while (!done) {
   w.refresh();
-  long ch = getch();
+  long ch = input();
   if (ch == 27) {	// Escape
    return 0;
   } else if (ch == '\n') {
@@ -448,7 +561,7 @@ long popup_getkey(const char *mes, ...)
  w.putstr(1, line_num, c_white, c_black, std::string(tmp));
  
  w.refresh();
- long ch = getch();
+ long ch = input();
  return ch;
 }
 
@@ -473,7 +586,7 @@ int menu_vec(const char *mes, std::vector<std::string> options)
  long ch;
  w.refresh();
  do
-  ch = getch();
+  ch = input();
  while (ch < '1' || ch >= '1' + options.size());
  return (ch - '1');
 }
@@ -537,7 +650,7 @@ void popup(const char *mes, ...)
  w.refresh();
  char ch;
  do
-  ch = getch();
+  ch = input();
  while(ch != ' ' && ch != '\n' && ch != KEY_ESC);
 }
 
@@ -592,6 +705,7 @@ bool parse_color_tags(std::string text, std::vector<std::string> &segments,
 // There's a little string left over; push it into our vectors!
  segments.push_back(text);
  color_pairs.push_back( get_color_pair(cur_fg, cur_bg) );
+ printf("pushed back: [%08x]\n", get_color_pair(cur_fg, cur_bg));
 
  if (segments.size() != color_pairs.size()) {
   debugmsg("Segments.size() = %d, color_pairs.size() = %d",

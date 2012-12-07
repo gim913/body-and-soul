@@ -18,9 +18,9 @@ CXX = g++
 LINKER = i486-mingw32-ld
 LINKERFLAGS = -Wl,-stack,12000000,-subsystem,console
 
-CFLAGS = $(WARNINGS) $(DEBUG) $(PROFILE) $(OTHERS)
+CFLAGS = $(WARNINGS) $(DEBUG) $(PROFILE) $(OTHERS) -Ilibtcod-1.5.1/include
 
-LDFLAGS = -static 
+LDFLAGS = -Llibtcod-1.5.1/lib -ltcod-mingw -static 
 
 SOURCES = $(wildcard *.cpp)
 _OBJS = $(SOURCES:.cpp=.o)

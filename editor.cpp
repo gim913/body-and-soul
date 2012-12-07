@@ -16,6 +16,7 @@ int main()
  w_main.outline();
  w_main.putstr( 1, 0, c_black, c_white, "<c=,ltblue>S<c=/>tats");
  w_main.line_v(26);
+
  int line = 1;
  body_stat test;
  test.name = "Test stat";
@@ -33,11 +34,11 @@ int main()
 
  refresh_all();
 
- getch();
+ input();
 
  save_data();
 
- endwin();
+ //endwin();
 
  return 0;
 }

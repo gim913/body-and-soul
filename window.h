@@ -1,7 +1,7 @@
 #ifndef _WINDOW_H_
 #define _WINDOW_H_
 
-#include <curses.h>
+#include <libtcod.hpp>
 #include <vector>
 #include "glyph.h"
 
@@ -66,7 +66,8 @@ class Window
   void clear();
   void refresh();
  private:
-  WINDOW* w;
+  TCODConsole* w;
+  int m_posx, m_posy;
   bool outlined;
   int xdim, ydim;
 };
